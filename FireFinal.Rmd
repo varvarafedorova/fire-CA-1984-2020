@@ -1,0 +1,249 @@
+---
+title: "Understanding the News During Fire Season"
+output: 
+  rmdformats::downcute:
+    code_folding: hide
+    highlight: pygments  
+    downcute_theme: "chaos"
+    toc_float: true
+    toc_depth: 2
+    fig_width: 11 
+    fig_height: 7 
+---
+
+## 
+
+![](/Users/varvarafedorova/Desktop/Fire/VisProj_FinalPhotos/NewsCollage.png)
+
+
+  In California, wildfires feel like a looming threat that we can't seem to get a handle on. Each fire season, voices from experts flood radio stations and newspapers, but the information is confusing and often feels conflicting. As climate change creates a nearly year-round fire season, fire agencies call for the allocation of more funding for better equipment, planes, and personnel. Worried experts agree that our landscapes are a ticking tinder-bomb, but they simultaneously argue that fire is a natural and necessary part of California's ecosystems, and that we should urgently be burning more land. When we see wildfires decimate our forests and leave a lifeless moonscape, how can that be true?
+
+Fire is...complicated. And the way that it is talked about it can be confusing. So we want to break it down here.
+
+
+## Fire is a Spectrum
+
+
+Good communication about the science of fires is hard. Often we are left with graphs like this: 
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(ggdark)
+library(ggh4x)
+library(ggiraph)
+library(ggrepel)
+library(ggtext)
+library(knitr)
+library(markdown)
+library(plotly)
+library(RColorBrewer)
+library(rmarkdown)
+library(scales)
+library(tidyverse)
+```
+
+```{r}
+#Introduce dataset, which we've renamed from the original name to "FireBurnSeverityData"
+df <- read.csv("FireBurnSeverityData.csv") 
+```
+
+```{r}
+#Summarise area burned by year in acres 
+YearlyTotals <- df %>%
+  group_by(Fire_Year) %>%
+  summarise(YearlyHighHec = sum(High_Severity.ha., na.rm = TRUE), YearlyModHec = sum(Moderate_Severity.ha., na.rm = TRUE), YearlyLowHec = sum(Low_Severity.ha., na.rm = TRUE), YearlyUnchangHec = sum(Unchanged.ha., na.rm = TRUE), YearlyTotal = sum(Total_area_burned.ha., na.rm = TRUE)) %>%
+
+  mutate(YearlyHighAc = YearlyHighHec * 2.47105, YearlyModAc = YearlyModHec * 2.47105, YearlyLowAc = YearlyLowHec * 2.47105, YearlyUnchangAc = YearlyUnchangHec * 2.47105, YearlyTotalAc = YearlyTotal * 2.47105) 
+  
+```
+
+```{r}
+#Getting number of fires per year
+FireFreq <- df %>%
+  count(Fire_Year)
+```
+
+
+```{r}
+#Joining df's together & creating graph that is most commonly used in wildfire communication
+YearlyTotals <- left_join(YearlyTotals, FireFreq, by = "Fire_Year") 
+YearlyTotals %>% 
+  ggplot(aes(x = Fire_Year)) +
+  geom_col(aes(y = YearlyTotal), fill="darkred") + 
+  scale_x_continuous(breaks = c(1984,1990,1995,2000,2005,2010,2015,2020)) +
+  geom_smooth(aes(y = n*15000), color = "goldenrod2", span = 0.15, size = 1, alpha = 0.1) + 
+  scale_y_continuous("Acres", sec.axis = sec_axis(trans = ~./15000, name = "Number of Fires"), labels = comma) +
+  dark_mode(theme_minimal()) +
+  labs(x = NULL , y = "Acres" , title = "Total CA Acres Burned by Year" , subtitle = "" , caption = "") +
+  annotate("text", x=1992, y=1250000, label="Number of Fires", size = 5.5, color = "goldenrod2") +
+  annotate("segment", x = 1990, xend = 1988, y = 1200000, yend = 1100000, color = "goldenrod2", size = 0.5, arrow = arrow()) +
+  
+   theme(axis.title.y = element_text(vjust = +2.5, size = 15), axis.title.x = element_text(vjust = -0.75), axis.title.y.right = element_text(vjust = +2.5), axis.text.x = element_text(size = 10, face = "bold"), axis.text.y = element_text(size = 10, face = "bold"))
+```
+
+How much land is actually burning? How long does it take for ecosystems to recover? The answer is...it depends.
+
+
+![](/Users/varvarafedorova/Desktop/Fire/VisProj_FinalPhotos/waffle1.png)
+
+
+![](/Users/varvarafedorova/Desktop/Fire/VisProj_FinalPhotos/waffle2.png)
+
+
+Experts promoting burning more land feels illogical in part because we're often taught that all fire is destructive. But that isn't true! There are several metrics that firefighters and researchers use to determine how "bad" a wildfire was. One is size, of course, but the other is what we call "severity," a measure of how much the ecosystem changed as a direct result of the fire. Severity is a spectrum. "Low-severity" fires that primarily burn ground fuels and small trees can be beneficial to forests. On the other end of the spectrum, raging fires that kill nearly all vegetation and living soil, are "high severity." 
+
+![](/Users/varvarafedorova/Desktop/Fire/VisProj_FinalPhotos/STEF.jpg)
+
+
+![](/Users/varvarafedorova/Desktop/Fire/VisProj_FinalPhotos/plumas.jpg)
+
+Low-severity fires can be ecologically restorative and often look nothing like the fires we see on the news. Under certain conditions, fires, ignited purposefully or naturally, can reduce fuel, stimulate germination and growth of some plants, and maintain biodiversity and health of our forest ecosystems. Indigenous people in the west have set fires intentionally for millennia and as a result, many of our plants have evolved to be dependent on fire. Native people refer to this practice as "cultural burning." After dealing with the consequences of more than a century of fire suppression, fire ecologists and fire professionals have been attempting to revive intentional burning too (“prescribed fire”).
+
+For this reason, millions of acres burning each year may actually be a good thing. But experts are not begging for more of the type of wildfires that are catastrophic and scary. It seems that there’s just two very different kinds of fire being talked about. The reason that both firefighting agencies and fire ecologists are worried, however, is that while restorative fires are still happening, we have been seeing a pretty dramatic increase in the frequency of larger and more catastrophic wildfires.
+
+
+```{r}
+#Mutate data to produce % severity & convert total area burned from hectares to acres
+df <- df %>%
+  mutate(Acres = Total_area_burned.ha. * 2.47105, LowPercent = Low_Severity.ha./Total_area_burned.ha. *100, ModPercent = Moderate_Severity.ha./Total_area_burned.ha. *100, HighPercent = High_Severity.ha./Total_area_burned.ha. *100, GrassPercent = Grass_Burned.ha./Total_area_burned.ha. *100, UnchangedPercent = Unchanged.ha./Total_area_burned.ha. *100, na.rm=TRUE)
+```
+
+```{r}
+#Creating base graph
+df %>%
+  filter(Acres > 25000) %>%
+  ggplot(aes(x = Fire_Year, y = HighPercent)) +
+  
+  geom_point(shape = 21, pch = 21, aes(size = Acres, position = "jitter", fill = HighPercent), color = "white", alpha = 0.45) +
+  
+  scale_fill_gradient2(low = "Chartreuse4", mid = "DarkOrange2", high = "azure4", midpoint = 35, name = NULL, guide = "colorbar", breaks = c(60, 35, 12), labels = c("   Catastrophic", "         \u2191 \u2193", "   Restorative")) + 
+  
+    guides(fill = guide_colorbar(ticks = FALSE, alpha = 0.5, barwidth = 0.5, barheight = 5)) +
+
+  scale_size_area(max_size = 20, name = NULL, breaks = c(70000, 200000), labels = c("Smaller Fire Size", "Larger Fire Size")) + 
+  
+  scale_y_continuous(breaks = c(10,20,30,40,50,60,70,80,90,100)) + scale_x_continuous(breaks = c(1984,1990,1995,2000,2005,2010,2015,2020)) +
+  
+  dark_mode(theme_classic()) + 
+  
+  theme(legend.box.margin = margin(0,0,0,0, "cm")) + 
+  
+  theme(axis.title.y = element_text(vjust = +2.5), axis.text.x = element_text(size = 12, face = "bold"), axis.text.y = element_text(size = 10, face = "bold")) +
+
+  labs(x = "" , y = "% of Fire at High Severity" , title = "Size & Severity Trends of CA Wildfires 1984 - 2020" , subtitle = "" , caption = "Showing data only for fires more than 25,000 acres in size") 
+```
+
+Under the worst conditions, fires can be absolutely catastrophic. Some “bad fires”, like the 2021 <p>Some “bad fires”, like the 2021
+<a href=”https://www.cbsnews.com/sanfrancisco/news/dixie-fire-wind-whipped-flames-make-13-mile-run-though-old-station-firefighters-challenged-by-40-to-50-foot-flames/”>Dixie Fire,</a> for example, decimated communities, blazed through forests with flame lengths up to 50 feet long, and exhibited extreme fire behavior, at one point making a 13-mile push in one day.
+</p>  
+
+The longer we wait to restore forests to their more fire-resilient conditions at a landscape scale, the less of a chance we will have to be able to save our forests at all. 
+
+![](/Users/varvarafedorova/Desktop/Fire/VisProj_FinalPhotos/rxfire.jpg)
+
+The primary reason we have seen such a dramatic increase in the size and frequency of high severity fires is due to more than a century of fire suppression policies. This has resuled in highly flammable forests with huge buildups of fuel, increased tree density, and the replacement of fire-dependent species with those that are not fire-adapted. Experts believe that prior to European colonization, any given piece of land in California burned every 5 to 30 years. Today, areas left unburned for more than 100 years are not uncommon. Compounded by the effects of climate change, drought, and lack of forest management, record-breaking catastrophic fires will continue to be California's new norm. 
+
+
+![](/Users/varvarafedorova/Desktop/Fire/VisProj_FinalPhotos/Year.gif){width=49%}![](/Users/varvarafedorova/Desktop/Fire/VisProj_FinalPhotos/Size.gif){width=49%} 
+
+How much land is actually burned at high severity?
+
+
+![](/Users/varvarafedorova/Desktop/Fire/VisProj_FinalPhotos/FireSev.png){width=49%}![](/Users/varvarafedorova/Desktop/Fire/VisProj_FinalPhotos/Chico.png){width=49%} 
+
+When we add information about the “typical” area burned at high severity, the trends become even more poignant: large fires, and large fires burning at these high, more catastrophic severities, are increasingly common.
+
+
+```{r}
+#Base graph with median & IQR 
+df %>%
+  filter(Acres > 25000) %>%
+  ggplot(aes(x = Fire_Year, y = HighPercent)) +
+  
+  geom_point(shape = 21, pch = 21, aes(size = Acres, position = "jitter", fill = HighPercent), color = "white", alpha = 0.45) +
+  
+  scale_fill_gradient2(low = "Chartreuse4", mid = "DarkOrange2", high = "azure4", midpoint = 35, name = NULL, guide = "colorbar", breaks = c(60, 35, 12), labels = c("   Catastrophic", "         \u2191 \u2193", "   Restorative")) + 
+  
+    guides(fill = guide_colorbar(ticks = FALSE, alpha = 0.5, barwidth = 0.5, barheight = 5)) +
+
+  scale_size_area(max_size = 20, name = NULL, breaks = c(70000, 200000), labels = c("Smaller Fire Size", "Larger Fire Size")) + 
+  
+  scale_y_continuous(breaks = c(10,20,30,40,50,60,70,80,90,100)) + scale_x_continuous(breaks = c(1984,1990,1995,2000,2005,2010,2015,2020)) +
+  
+  dark_mode(theme_classic()) + 
+  
+  theme(legend.box.margin = margin(0,0,0,0, "cm")) + 
+  
+  theme(axis.title.y = element_text(vjust = +2.5), axis.text.x = element_text(size = 12, face = "bold"), axis.text.y = element_text(size = 10, face = "bold")) +
+
+  labs(x = "" , y = "% of Fire at High Severity" , title = "Size & Severity Trends of CA Wildfires 1984 - 2020" , subtitle = "" , caption = "Showing data only for fires more than 25,000 acres in size") + 
+  
+  geom_hline(yintercept = median(df$HighPercent, na.rm = TRUE), linetype = "dashed", color = "lightblue", alpha = 0.6) + geom_hline(yintercept = IQR(df$HighPercent, na.rm = TRUE), linetype = "dashed", color = "lightblue", alpha = 0.8) + annotate("text", x=2002, y=25, label="75% of all sampled fires have high severity area at this level or below") + annotate("text", x=2002, y=12, label="Median % high severity of sample size") 
+
+```
+
+Explore these fires for yourself!
+
+
+```{r}
+#Setting it up for the interactive version of the graph by overriding some ggplot defaults
+p2 <- df %>%
+  filter(Acres > 25000) %>%
+  ggplot(aes(x = Fire_Year, y = HighPercent, group = 1, text = paste(Fire_Name, "<br>Year:", Fire_Year, "<br>Fire Size:", prettyNum(round(Acres, digits = 1), big.mark = ",", scientific = FALSE), "acres"))) +
+  
+  geom_point(shape = 21, pch = 21, aes(size = Acres, position = "jitter", fill = HighPercent), color = "white", alpha = 0.45) +
+  
+  scale_fill_gradient2(low = "Chartreuse4", mid = "DarkOrange2", high = "azure4", midpoint = 35, name = NULL, guide = "colorbar", breaks = c(60, 35, 12), labels = c("   Catastrophic", "         \u2191 \u2193", "   Restorative")) + 
+  
+    guides(fill = guide_colorbar(ticks = FALSE, alpha = 0.5, barwidth = 0.5, barheight = 5)) +
+
+  scale_size_area(max_size = 20, name = NULL, breaks = c(70000, 200000), labels = c("Smaller Fire Size", "Larger Fire Size")) + 
+  
+  scale_y_continuous(breaks = c(10,20,30,40,50,60,70,80,90,100)) + scale_x_continuous(breaks = c(1984,1990,1995,2000,2005,2010,2015,2020)) +
+  
+  dark_mode(theme_classic()) + 
+  
+  theme(legend.box.margin = margin(0,0,0,0, "cm")) + 
+  
+  theme(axis.title.y = element_text(vjust = +2.5), axis.text.x = element_text(size = 12, face = "bold"), axis.text.y = element_text(size = 10, face = "bold")) +
+
+  labs(x = "" , y = "% of Fire at High Severity" , title = "Size & Severity Trends of CA Wildfires 1984 - 2020" , subtitle = "" , caption = "Showing data only for fires more than 25,000 acres in size")
+  
+  
+```
+```{r}
+ggplotly(p2, tooltip = "text") 
+```
+
+## Where to go from Here
+
+A more nuanced way to communicate fire in California has the potential to significantly support efforts to shift perceptions, attitudes, and education about fire. While fear- and suppression-driven responses to fire are justified at times, these responses are reactionary and don’t account for the role fire plays in our ecosystems. Suppressing all small fires now means large, catastrophic fires later. Our first step out of this negative feedback loop is understanding and advocating for more prescribed burning, letting some fires burn naturally, and active land management.
+ 
+	
+## Limitations 
+
+Graphical representation and analysis is limited to the fires chosen for the study & dataset, which focuses on CalFire statistics and excludes Federal statistics. For context, in 2020 about 1.5 million acres burned in CA under CalFire jurisdiction; combined CalFire and Federal fires in 2020 brings the total up to 4.3 million acres. Additionally, this data is limited to a 1984 - 2020 time frame only. For data visualization purposes, fires were filtered for size (minimum 25,000 acres).
+
+## Citations
+Xu, Qingqing et al. (2022), Wildfire burn severity and emissions inventory: an example implementation over California, Dryad, Dataset, https://doi.org/10.6071/M3QX18
+
+## Design
+We wanted this project to try to make sense of some of the discrepancies in fire science communication, so we created a familiar news-like visual narrative. We utilized an all-black design background because we thought the data would show up better against it; it ended up looking really sleek and mysterious, drawing the audience into the fire “theme.” 
+
+Feedback from the class guided many of our final design decisions. Last time we presented, we had both been working diligently on separate parts, and hadn’t yet talked about a cohesive aesthetic, so having input from the class before we got to the real design process was really helpful. We maintained the color choices and graphs that the class thought were most compelling, and tried to simplify or remove others. 
+
+A time series felt the most intuitive. The green-orange-black/brown color choice spectrum mimics the colors associated with life (regenerative fires) and death (catastrophic fires). The color and y-axis position are double-encoding, but feels much more effective to a non-fire expert viewing the data. Size as it relates to total fire area adds a level of gravitas to each data point. A white outline to each point was added to distinguish points better. 
+
+We spent a lot of time on this - We were both teaching ourselves a lot of GIS and R (I even had to wait for and set up a desktop to use for GIS!) and we estimate that we each spent upwards of 40-50 hours each, start-to-finish (100+ people-hours). We made a lot of changes since the last iteration we presented.   
+
+Varya primarily worked on visualizing data in R. For her, the most time consuming part of this project was trying to figure out how to make graphs behave in particular ways (changing legends, making things interactive, etc.)
+
+Since Tara has slightly more background in GIS, I primarily worked on geospatial analysis and writing the html code. Aside from just waiting to have access to ArcGIS that worked well, the most time consuming part for me was data management - converting back and forth between raster and vector datasets, trying to clip out extra “noise,” etc. Still, there was just so much data that every function took forever to run (sometimes up to an hour), and many took multiple tries. 
+	
+
